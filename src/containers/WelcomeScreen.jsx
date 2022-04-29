@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import pic from './../assets/02.png';
 import './../css/index.css';
 import SignUpModal from "../components/SignUpModal";
@@ -6,17 +6,10 @@ import LogInModal from "../components/LogInModal";
 import Footer from '../components/Footer';
 import SectionTwo from "../components/WelcomeScreenSectionTwo";
 import SectionThree from "../components/WelcomeScreenSectionThree";
+import useToggle from "../hooks/useToggle";
 
-function WelcomeScreen() {
-  const [switchToggle, setSwitchToggle] = useState(false)
-  const buttonClicked = () => {
-    switchToggle ? setSwitchToggle(false) : setSwitchToggle(true)
-  };
-
-  const [loginModal, setLoginModal] = useState(false)
-  const loginClicked = () => {
-    loginModal ? setLoginModal(false) : setLoginModal(true)
-  };
+export default function WelcomeScreen() {
+  const { showSignUp, showLogIn, toggleModal } = useToggle();
 
   return (
     <div className="welcome">
@@ -31,12 +24,11 @@ function WelcomeScreen() {
           <a>
             Blog
           </a>
-            <button className="SignUp" onClick={buttonClicked}>
+            <button className="SignUp" onClick={() => toggleModal(true)}>
               Sign Up
             </button>
         </div>
       </nav>
-
       <div className="WelcomeScreen-content">
         <div className='grid'>
           <div className='left'>
@@ -52,7 +44,7 @@ function WelcomeScreen() {
               </span>
             </p>
             <div className='buttons'>
-              <button className='LogIn' onClick={loginClicked} >
+              <button className='LogIn' onClick={() => toggleModal(false)} >
                 Log in
               </button>
               <button className='downloadBtn'>
@@ -65,19 +57,11 @@ function WelcomeScreen() {
           </div>
         </div>
       </div>
-
-      <SignUpModal 
-        displayState={switchToggle ? "show-sign-up-modal" : "sign-up-modal"} 
-        closeState={buttonClicked}
-      />
-      <LogInModal 
-        displayState={loginModal ? "show-login-modal" : "login-modal"}
-        closeState={loginClicked}
-      />
+      {showSignUp ? <SignUpModal closeState={() => toggleModal(true)}/> : null}
+      {showLogIn ? <LogInModal closeState={() => toggleModal(false)}/> : null}
       <SectionTwo />
       <SectionThree />
       <Footer />
     </div>
   );
 }
-export default WelcomeScreen ;

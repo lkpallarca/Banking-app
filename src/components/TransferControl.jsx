@@ -3,8 +3,11 @@ import './../css/index.css';
 import CurrencyOptions from './CurrencyOptions';
 import AlertModals from './AlertModals';
 import { AccountOptionsTransferFrom, AccountOptionsTransferTo } from './AccountOptions';
+import useDate from '../hooks/useDate';
+import { updateStoredHistory, updateStoredUserInfo, getLoggedUser } from '../storage/storage';
 
-export default function TransferControl({ displayFeature, currentUsers, setCurrentUser, passedHistory, setPassedHistory, accessingUser }) {
+export default function TransferControl({ currentUsers, setCurrentUser, passedHistory, setPassedHistory }) {
+  const accessingUser = getLoggedUser();
   const [matchedAccFrom, setAccMatchFrom] = useState(accessingUser);
   const [accLabelFrom, setAccLabelFrom] = useState('Please select Sender Account Number');
   const [matchedAccTo, setAccMatchTo] = useState();
@@ -18,44 +21,24 @@ export default function TransferControl({ displayFeature, currentUsers, setCurre
   const [invalidAmount, setInvalidAmount] = useState(false)
   const [sameAccError, setSameAccError] = useState(false)
   const [currency, setCurrency] = useState(1)
-  const date = new Date().toLocaleString().split(',')[0]
-  const hours = new Date().getHours()
-  var mins = new Date().getMinutes()
-  mins = mins > 9 ? mins : '0' + mins
-  const time = `${date} ${hours}:${mins}`
+  const { time } = useDate();
 
   useEffect(() => {
-    currentUsers.find(acc => {
-      if(acc.accNum === matchedAccFrom) {
-        let newBalance = acc.balance
-        let transfer = transferAmount
-        transfer *= currency
-        if(newBalance < transfer) {
-          setApproveTransfer(false)
-        }
-      }
-    })
+    const selectedUser = currentUsers.find(acc => acc.accNum === matchedAccFrom)
+    if(selectedUser?.balance < (transferAmount * currency)) {
+      setApproveTransfer(false)
+    }
   }, [transferAmount, currency])
-  
-  function storeTransferAmount(e) {
-    setTransferAmount(Number(e.target.value))
-  }
 
   function handleInputTransferTo(e) {
-    currentUsers.find(user => {
-      if(user.accNum === e.target.value) {
-        setCorrectTransferTo(true)
-        setAccMatchTo(e.target.value)
-      }
-    })
+    const selectedUser = currentUsers.find(user => user.accNum === e.target.value)
+    if(selectedUser) {
+      setCorrectTransferTo(true)
+      setAccMatchTo(e.target.value)
+    }
   }
 
-  function handleSubmit(e) {
-    e.preventDefault()
-    let from
-    let to
-    let transfer = transferAmount 
-    let transferHistory = transfer * currency
+  const shortCircuit = (e) => {
     if(transferAmount < 100) {
       setInvalidAmount(true)
       e.target.reset()
@@ -68,35 +51,32 @@ export default function TransferControl({ displayFeature, currentUsers, setCurre
       resetState()
       return
     }
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    const selectedUserFrom = currentUsers.find(acc => acc.accNum === matchedAccFrom)
+    const selectedUserTo = currentUsers.find(acc => acc.accNum === matchedAccTo)
+    const from = `${selectedUserFrom.lname} ${selectedUserFrom.fname}`
+    const to = `${selectedUserTo.lname} ${selectedUserTo.fname}`
+    shortCircuit(e);
     if(matchedAccFrom !== matchedAccTo) {
-      currentUsers.find(acc => {
-        if(acc.accNum === matchedAccFrom) {
-          let newBalance = acc.balance
-          from = `${acc.lname} ${acc.fname}`
-          if(approveTransfer == true) {
-            newBalance -= transferHistory
-            acc.balance = newBalance
-            setTransactionSuccessful(true)
-          } else {
-            setNotEnoughBalance(true)
-          }
-        }
-        if(acc.accNum === matchedAccTo) {
-          let newBalance = acc.balance
-          to = `${acc.lname} ${acc.fname}`
-          if(approveTransfer == true) {
-            newBalance += transferHistory
-            acc.balance = newBalance
-            setCurrentUser([...currentUsers])
-          }
-        }
-      })
+      if(approveTransfer === true) {
+        selectedUserFrom.balance -= (transferAmount * currency)
+        selectedUserTo.balance += (transferAmount * currency)
+        setTransactionSuccessful(true)
+        setCurrentUser(currentUsers)
+        updateStoredUserInfo(currentUsers)
+      } else {
+        setNotEnoughBalance(true)
+      }
     } else {
       setSameAccError(true)
     }
-    let newHistory = `${from} transferred ₱${transferHistory} to ${to} on ${time}.`
-    let receiverHistory = `${to} received ₱${transferHistory} from ${from} on ${time}.`
+    let newHistory = `${from} transferred ₱${(transferAmount * currency)} to ${to} on ${time}.`
+    let receiverHistory = `${to} received ₱${(transferAmount * currency)} from ${from} on ${time}.`
     setPassedHistory([...passedHistory, {accNum: matchedAccFrom, history: newHistory}, {accNum: matchedAccTo, history: receiverHistory}])
+    updateStoredHistory([...passedHistory, {accNum: matchedAccFrom, history: newHistory}, {accNum: matchedAccTo, history: receiverHistory}])
     e.target.reset()
     resetState()
   }
@@ -119,12 +99,12 @@ export default function TransferControl({ displayFeature, currentUsers, setCurre
       </div>
       <form autoComplete='off' onSubmit={handleSubmit}>
         <div className='transfer-control-container'>
-        <div className={displayFeature}>
+        <div className='enter-acc-no'>
           {accessingUser === 'admin' &&
             <AccountOptionsTransferFrom passedUserInfo={currentUsers} onSetAccLabel={setAccLabelFrom} selectedAccLabel={accLabelFrom} onSelectAcc={setAccMatchFrom} selectedAcc={matchedAccFrom} />
           }
         </div>
-        <div className={displayFeature}>
+        <div className='enter-acc-no'>
           {accessingUser === 'admin' ?
             <AccountOptionsTransferTo setCorrectTransferTo={setCorrectTransferTo} passedUserInfo={currentUsers} onSetAccLabel={setAccLabelTo} selectedAccLabel={accLabelTo} onSelectAcc={setAccMatchTo} selectedAcc={matchedAccTo} /> :
             <>
@@ -137,7 +117,7 @@ export default function TransferControl({ displayFeature, currentUsers, setCurre
           <label htmlFor="amount">Enter an Amount</label>
         <div className='transfer-enter-amount'>
           <CurrencyOptions convertCurr={currency} onConvertCurr={setCurrency}/> 
-          <input required type="number" name='amount' onChange={storeTransferAmount}/>
+          <input required type="number" name='amount' onChange={(e) => setTransferAmount(Number(e.target.value))}/>
         </div>
       </div>
         <div className='transfer-triggers'>

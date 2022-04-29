@@ -8,78 +8,32 @@ import WithdrawControl from '../components/WithdrawControl';
 import History from '../components/History';
 import './../css/index.css';
 import UserInfo from '../components/UserInfo';
+import { getLoggedUser, getStoredHistory, getStoredUsers, updateStoredHistory, updateStoredUserInfo } from '../storage/storage';
 
 export default function UserScreen() {
   const [userInfo, setUserInfo] = useState([]);
   const [history, setHistory] = useState([])
-  const loggedUser = JSON.parse(localStorage.getItem("loggedUser"))
-  const [name, setName] = useState('')
-  const [userName, setUserName] = useState('')
-  const [accCateg, setAccCateg] = useState('')
-  const [accType, setAccType] = useState('')
-  const [balance, setBalance] = useState('')
-  const [isParent, setIsParent] = useState(true)
-  const [childAccNum, setChildAccNum] = useState([])
-  const [childName, setChildName] = useState([])
-  const [hasChildren, setHasChildren] = useState(false)
   const [displayModal, setDisplayModal] = useState('welcome-modal')
   const [displayHistory, setDisplayHistory] = useState(false)
-  const [childArray, setChildArray] = useState([])
-  const [historyArray, setHistoryArray] = useState([])
-  let children = []
-  let userHistory = []
-
+  const [increment, setIncrement] = useState(0)
+  const loggedUser = getLoggedUser();
+  
   useEffect(()=> {
-    const getUsers = JSON.parse(localStorage.getItem("users"));
-    const getHistory = JSON.parse(localStorage.getItem("history"));
-    setUserInfo([...userInfo]);
-    setHistory([...history])
-    if(getUsers) setUserInfo(getUsers);
-    if(getHistory) setHistory(getHistory)
+    setUserInfo(getStoredUsers())
+    const getHistory = getStoredHistory()
+    if(getHistory) {
+      setHistory(getHistory)
+    } else {
+      updateStoredHistory([])
+    }
   }, [])
 
   useEffect(()=> {
-    localStorage.setItem("history", JSON.stringify(history))
-    history.find(history => {
-      if(history.accNum === loggedUser) {
-        userHistory.push(history.history)
-        setHistoryArray(userHistory)
-      }
-    })
+    updateStoredHistory(history);
+    setIncrement(increment + 1)
   }, [history])
-
-  useEffect(()=> {
-    localStorage.setItem("users", JSON.stringify(userInfo))
-    userInfo.find(user => {
-      if(user.accNum == loggedUser) {
-        setBalance(user.balance)
-      }
-      if(user.parentAcc == loggedUser) {
-        children.push(user.balance)
-        setChildArray(children)
-      }
-    })
-  }, [userInfo])
-
+  
   function renderInfo() {
-    userInfo.find(user => {
-      if(user.accNum == loggedUser) {
-        setUserName(user.username)
-        setName(`${user.lname} ${user.fname} ${user.mname}`)
-        setAccCateg(user.acccateg)
-        setAccType(user.acctype)
-        setBalance(user.balance)
-
-        if(user.acccateg !== 'Parent') {
-          setIsParent(false)
-        }
-      }
-      if(user.parentAcc == loggedUser) {
-        setChildAccNum(prevChild => [...prevChild, user.accNum])
-        setChildName(prevChild =>  [...prevChild,`${user.lname} ${user.fname} ${user.mname}`])
-        setHasChildren(true)
-      }
-    })
     setDisplayModal('welcome-modal hide')
   }
 
@@ -105,28 +59,13 @@ export default function UserScreen() {
           <History
             displayState={displayHistory ? "alert-modal-wrapper show" : "alert-modal-wrapper"}
             closeState={()=> displayHistory ? setDisplayHistory(false) : setDisplayHistory(true)}
-            historyMessage={historyArray}
+            historyMessage={history}
             accessingUser={loggedUser}
           />
-          <UserInfo 
-            accessingUser={loggedUser} 
-            passedName={name} 
-            passedUserName={userName} 
-            passedAccCateg={accCateg} 
-            passedAccType={accType} 
-            passedBalance={balance} 
-            ifParent={isParent}
-            passedChildAccNum={childAccNum}
-            passedChildName={childName}
-            ifHasChildren={hasChildren}
-            passedChildArray={childArray}
-          />
+          <UserInfo increment={increment}/>
         </div>
         <div className='grid-two'>
         <UserExpenses 
-            accessingUser={loggedUser}
-            passedBalance={balance}
-            setPassedBalance={setBalance}
             passedHistory={history}
             setPassedHistory={setHistory}
           />
@@ -134,28 +73,22 @@ export default function UserScreen() {
           <WithdrawControl 
               currentUsers={userInfo} 
               setCurrentUser={setUserInfo} 
-              displayFeature="enter-acc-no" 
               passedHistory={history}
               setPassedHistory={setHistory}
-              accessingUser={loggedUser}
           />
           <DepositControl 
               currentUsers={userInfo} 
               setCurrentUser={setUserInfo} 
-              displayFeature="enter-acc-no" 
               passedHistory={history}
               setPassedHistory={setHistory}
-              accessingUser={loggedUser}
             />
           </div>
           <div className='transfer-control'>
           <TransferControl 
               currentUsers={userInfo} 
               setCurrentUser={setUserInfo} 
-              displayFeature="enter-acc-no" 
               passedHistory={history}
               setPassedHistory={setHistory}
-              accessingUser={loggedUser}
             />
           </div>
         </div>

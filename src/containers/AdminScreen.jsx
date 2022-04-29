@@ -1,41 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import AlertModals from '../components/AlertModals';
-import { AccountOptions } from '../components/AccountOptions';
-import AccountsTable from '../components/AccountsTable';
+import React, { useState, useEffect } from 'react'
+import AlertModals from '../components/AlertModals'
+import { AccountOptions } from '../components/AccountOptions'
+import AccountsTable from '../components/AccountsTable'
 import CurrencyOptions from '../components/CurrencyOptions'
-import WithdrawControl from '../components/WithdrawControl';
-import DepositControl from '../components/DepositControl';
-import TransferControl from '../components/TransferControl';
-import generateAccNum from '../utils/generateAccNum';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import History from '../components/History';
-import './../css/index.css';
-import capitalizeLetters from '../utils/capitalizeLetters';
+import WithdrawControl from '../components/WithdrawControl'
+import DepositControl from '../components/DepositControl'
+import TransferControl from '../components/TransferControl'
+import generateAccNum from '../utils/generateAccNum'
+import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
+import History from '../components/History'
+import './../css/index.css'
+import capitalizeLetters from '../utils/capitalizeLetters'
+import { getStoredHistory, getStoredUsers, updateStoredHistory, updateStoredUserInfo } from '../storage/storage'
+import useDate from '../hooks/useDate'
 
 export default function AdminScreen() {
-  const [userInfo, setUserInfo] = useState([]);
-  const [accountNumber, setAccountNumber] = useState(generateAccNum);
-  const [lastName, setLastname] = useState('');
-  const [firstName, setFirstname] = useState('');
-  const [middleName, setMiddlename] = useState('');
-  const [accType, setAccType] = useState('Savings');
-  const [initDeposit, setInitDeposit] = useState();
+  const [userInfo, setUserInfo] = useState([])
+  const [lastName, setLastname] = useState('')
+  const [firstName, setFirstname] = useState('')
+  const [middleName, setMiddlename] = useState('')
+  const [accType, setAccType] = useState('Savings')
+  const [initDeposit, setInitDeposit] = useState()
   const [accMatch, setAccMatch] = useState('')
   const [status, setStatus] = useState(0)
   const [ifUserAlreadyExist, setIfUserAlreadyExist] = useState(false)
   const [invalidAmount, setInvalidAmount] = useState(false)
   const [invalidName, setInvalidName] = useState(false)
   const [addUserSuccess, setAddUserSuccess] = useState(false)
-  const [accLabel, setAccLabel] = useState('Please select Parent Account Number');
+  const [accLabel, setAccLabel] = useState('Please select Parent Account Number')
   const [history, setHistory] = useState([])
   const [displayHistory, setDisplayHistory] = useState(false)
-  const today = new Date();
-  const hrs24 = today.getHours();
+  const { displayDate } = useDate();
 
-  useEffect(()=> {
-    const getUsers = JSON.parse(localStorage.getItem("users"));
-    const getHistory = JSON.parse(localStorage.getItem("history"));
+  const checkUsers = () => {
+    const getUsers = getStoredUsers();
+    if(getUsers) {
+      setUserInfo(getUsers)
+      return
+    }
     const defaultUsers = [
       {
         accNum: "RP 142 4200 2804", 
@@ -106,113 +109,74 @@ export default function AdminScreen() {
         expenses: []
       }
     ]
-    setUserInfo([...defaultUsers, ...userInfo]);
-    setHistory([...history])
-    if(getUsers) setUserInfo(getUsers);
-    if(getHistory) setHistory(getHistory)
-  }, [])
+    setUserInfo(defaultUsers)
+    updateStoredUserInfo(defaultUsers)
+  }
 
-  useEffect(()=> {
-    localStorage.setItem("history", JSON.stringify(history))
-  }, [history])
-
-  useEffect(()=> {
-    localStorage.setItem("users", JSON.stringify(userInfo))
-  }, [userInfo])
-
-  function getHours(h) {
-    if (h < 12) {
-      return 'Good Morning, Admin'
-    } else if (h <= 18) {
-      return 'Good Afternoon, Admin'
+  const checkHistory = () => {
+    const getHistory = getStoredHistory()
+    if(getHistory) {
+      setHistory(getHistory)
     } else {
-      return 'Good Evening, Admin'
+      updateStoredHistory([])
     }
   }
 
-  function handleAccountNumber() {
-    setAccountNumber(generateAccNum);
-  }
+  useEffect(()=> {
+    checkUsers()
+    checkHistory()
+  }, [])
 
-  function handleLastName(e) {
-    setLastname(capitalizeLetters(`${e.target.value.trim()},`))
-  }
-
-  function handleFirstName(e) {
-    setFirstname(capitalizeLetters(e.target.value.trim()));
-  }
-
-  function handleMiddleName(e) {
-    setMiddlename(capitalizeLetters(e.target.value.trim()));
-  }
-
-  function handleAccType(e) {
-    setAccType(e.target.value);
-  }
-
-  function handleInitDeposit(e) {
-    setInitDeposit(Number(e.target.value));
-  }
-  
-  function handleAdd(e) {
+  const addNewUser = (e, category, matchedParent = null) => {
     e.preventDefault()
-    let addUserInfo
+    const correctAmount = checkAmount(e)
+    if(correctAmount) {
+      return
+    }
+      const newUserInfo = {
+      accNum: generateAccNum(), 
+      lname: lastName,
+      fname: firstName, 
+      mname: middleName,
+      acccateg: category,
+      acctype: accType,
+      balance: initDeposit,
+      expenses: [],
+      parentAcc: matchedParent
+    }
+    checkUserExist(newUserInfo)
+    e.target.reset()
+    resetState()
+  }
+
+  const checkAmount = (e) => {
     if(initDeposit < 2000) {
       setInvalidAmount(true)
       e.target.reset()
       resetState()
+      return true
+    }
+    return false
+  }
+
+  const checkUserExist = (newUser) => {
+    const checkUserExist = userInfo.find(user => user.lname == lastName && user.fname == firstName)
+    if(!checkUserExist) {
+      setAddUserSuccess(true)
+      setUserInfo([...userInfo, newUser])
+      updateStoredUserInfo([...userInfo, newUser])
+    } else {
+      setIfUserAlreadyExist(true)
       return
     }
-    if(status == 1 && accMatch !== '') {
-      handleAccountNumber();
-      addUserInfo = {
-        accNum: accountNumber, 
-        lname: lastName,
-        fname: firstName, 
-        mname: middleName,
-        acccateg: "Child",
-        acctype: accType,
-        balance: initDeposit,
-        parentAcc: accMatch,
-        expenses: []
-      };
-      const checkUserExist = userInfo.findIndex(user => user.lname == lastName && user.fname == firstName)
-      if(!userInfo[checkUserExist]) {
-        setAddUserSuccess(true)
-        setUserInfo([...userInfo, addUserInfo]);
-      } else {
-        setIfUserAlreadyExist(true)
-      }
-    } else if(status == 0) {
-      handleAccountNumber();
-      addUserInfo = {
-        accNum: accountNumber, 
-        lname: lastName,
-        fname: firstName, 
-        mname: middleName,
-        acccateg: "Parent",
-        acctype: accType,
-        balance: initDeposit,
-        expenses: []
-      };
-      const checkUserExist = userInfo.findIndex(user => user.lname == lastName && user.fname == firstName)
-      if(!userInfo[checkUserExist]) {
-        setAddUserSuccess(true)
-        setUserInfo([...userInfo, addUserInfo]);
-      } else {
-        setIfUserAlreadyExist(true)
-      }
-    }
-    e.target.reset();
-    resetState();
   }
 
   function resetState() {
-    setLastname('');
-    setFirstname('');
-    setMiddlename('');
-    setAccType('Savings');
-    setInitDeposit();
+    setLastname('')
+    setFirstname('')
+    setMiddlename('')
+    setAccType('Savings')
+    setInitDeposit()
     setStatus(0)
     setAccMatch()
     setAccLabel('Please select Parent Account Number')
@@ -221,7 +185,7 @@ export default function AdminScreen() {
   return (
     <div className="admin-main-container">
       <Navbar/>
-      <h1 className='greeting'>{getHours(hrs24)}</h1>
+      <h1 className='greeting'>{displayDate}</h1>
       <section className="admin-wrapper">
         <div className='historyBtn' onClick={()=> setDisplayHistory(true)}>
           <i className="fa-solid fa-clock-rotate-left"></i>
@@ -229,20 +193,23 @@ export default function AdminScreen() {
         </div>
         <AccountsTable passedUserInfo={userInfo} setPassedUserInfo={setUserInfo} />
         <section className='add-account-control-wrapper'>
-          <form autoComplete='off' id="add-account-form" onSubmit={handleAdd}>
+          <form autoComplete='off' id="add-account-form" onSubmit={status === 1 && accMatch !== '' ? 
+            (e) => {addNewUser(e, 'Child', accMatch)} : 
+            (e) => {addNewUser(e, 'Parent')}}
+          >
             <div className='add-user-title'>Add New User</div>
             <div className='user-name'>
               <div>
                 <label htmlFor="lastname">Last Name</label>
-                <input required id='test' type="text" name='lastname' onChange={handleLastName}/>
+                <input required id='test' type="text" name='lastname' onChange={(e) => setLastname(capitalizeLetters(`${e.target.value.trim()},`))}/>
               </div>
               <div>
                 <label htmlFor="firstname">First Name</label>
-                <input required type="text" name='firstname' onChange={handleFirstName}/>
+                <input required type="text" name='firstname' onChange={(e) => setFirstname(capitalizeLetters(e.target.value.trim()))}/>
               </div>
               <div>
                 <label htmlFor="middlename">Middle Name</label>
-                <input type="text" name='middlename' onChange={handleMiddleName}/>
+                <input type="text" name='middlename' onChange={(e) => setMiddlename(capitalizeLetters(e.target.value.trim()))}/>
               </div>
             </div>
             <div className='add-account-acc-category'>
@@ -260,10 +227,10 @@ export default function AdminScreen() {
             <div className='add-account-acc-type'>
               <label htmlFor="acc-type">Account Type</label>
               <div>
-                <input type="radio" value="Savings" name='acc-type' defaultChecked onChange={handleAccType}/> Savings
+                <input type="radio" value="Savings" name='acc-type' defaultChecked onChange={(e) => setAccType(e.target.value)}/> Savings
               </div>
               <div>
-                <input type="radio" value="Checking" name='acc-type' onChange={handleAccType}/> Checking
+                <input type="radio" value="Checking" name='acc-type' onChange={(e) => setAccType(e.target.value)}/> Checking
               </div>
             </div>
             <div className='initial-deposit'>
@@ -272,7 +239,7 @@ export default function AdminScreen() {
               </div>
               <div className='currency-and-amount'>
                 <CurrencyOptions />
-                <input required type="number" name='initial-deposit' onChange={handleInitDeposit}/>
+                <input required type="number" name='initial-deposit' onChange={(e) => setInitDeposit(Number(e.target.value))}/>
               </div>
             </div>
             <div className="add-account-triggers">
@@ -287,20 +254,16 @@ export default function AdminScreen() {
               <WithdrawControl 
                 currentUsers={userInfo} 
                 setCurrentUser={setUserInfo} 
-                displayFeature="enter-acc-no" 
                 passedHistory={history}
                 setPassedHistory={setHistory}
-                accessingUser={'admin'}
               />
             </div>
             <div>
               <DepositControl 
                 currentUsers={userInfo} 
                 setCurrentUser={setUserInfo} 
-                displayFeature="enter-acc-no"  
                 passedHistory={history}
                 setPassedHistory={setHistory}
-                accessingUser={'admin'}
               />
             </div>
           </div>
@@ -308,10 +271,8 @@ export default function AdminScreen() {
             <TransferControl 
               currentUsers={userInfo} 
               setCurrentUser={setUserInfo} 
-              displayFeature="enter-acc-no"  
               passedHistory={history}
               setPassedHistory={setHistory}
-              accessingUser={'admin'}
             />
           </div>
         </div>
@@ -348,11 +309,11 @@ export default function AdminScreen() {
         image={"https://img.icons8.com/cotton/50/000000/error--v4.png"}
       />
       <History
-      displayState={displayHistory ? "alert-modal-wrapper show" : "alert-modal-wrapper"}
-      closeState={()=> displayHistory ? setDisplayHistory(false) : setDisplayHistory(true)}
-      historyMessage={history}
-      setHistoryList={setHistory}
-      accessingUser={'admin'}
+        displayState={displayHistory ? "alert-modal-wrapper show" : "alert-modal-wrapper"}
+        closeState={()=> displayHistory ? setDisplayHistory(false) : setDisplayHistory(true)}
+        historyMessage={history}
+        setHistoryList={setHistory}
+        accessingUser={'admin'}
       />
     </div>
   );

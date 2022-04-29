@@ -3,24 +3,19 @@ import CurrencyOptions from './CurrencyOptions';
 import AlertModals from './AlertModals';
 import './../css/index.css';
 import { AccountOptions } from './AccountOptions';
+import useDate from '../hooks/useDate';
+import { updateStoredHistory, updateStoredUserInfo, getLoggedUser } from '../storage/storage';
 
-export default function WithdrawControl({ displayFeature, currentUsers, setCurrentUser, passedHistory, setPassedHistory, accessingUser }) {
-  const [matchedAcc, setAccMatch] = useState(accessingUser);
-  const [accLabel, setAccLabel] = useState('Please select Account Number');
+export default function WithdrawControl({ currentUsers, setCurrentUser, passedHistory, setPassedHistory }) {
+  const accessingUser = getLoggedUser()
+  const [matchedAcc, setAccMatch] = useState(getLoggedUser)
+  const [accLabel, setAccLabel] = useState('Please select Account Number')
   const [withdrawAmount, setWithdrawAmount] = useState()
   const [notEnoughBalance, setNotEnoughBalance] = useState(false)
   const [transactionSuccessful, setTransactionSuccessful] = useState(false)
   const [invalidAmount, setInvalidAmount] = useState(false)
   const [currency, setCurrency] = useState(1)
-  const date = new Date().toLocaleString().split(',')[0]
-  const hours = new Date().getHours()
-  var mins = new Date().getMinutes()
-  mins = mins > 9 ? mins : '0' + mins
-  const time = `${date} ${hours}:${mins}`
-
-  function storeWithdrawAmount(e) {
-    setWithdrawAmount(Number(e.target.value))
-  }
+  const { time } = useDate()
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -30,23 +25,18 @@ export default function WithdrawControl({ displayFeature, currentUsers, setCurre
       resetState()
       return
     }
-    currentUsers.find(acc => {
-      if(acc.accNum === matchedAcc) {
-        let newBalance = acc.balance
-        let withdrawal = withdrawAmount
-        withdrawal *= currency
-        if(newBalance > withdrawal) {
-          newBalance -= withdrawal
-          acc.balance = newBalance
-          let newHistory = `${acc.lname} ${acc.fname} withdrew ₱${withdrawal} on ${time}.`
-          setPassedHistory([...passedHistory, {accNum: matchedAcc, history: newHistory}])
-          setTransactionSuccessful(true)
-          setCurrentUser([...currentUsers])
-        } else {
-          setNotEnoughBalance(true)
-        }
-      }
-    })
+    const selectedUser = currentUsers.find(acc => acc.accNum === matchedAcc)
+    if(selectedUser?.balance > (withdrawAmount * currency)) {
+      selectedUser.balance -= (withdrawAmount * currency)
+      let newHistory = `${selectedUser.lname} ${selectedUser.fname} withdrew ₱${(withdrawAmount * currency)} on ${time}.`
+      setPassedHistory([...passedHistory, {accNum: matchedAcc, history: newHistory}])
+      setTransactionSuccessful(true)
+      setCurrentUser(currentUsers)
+      updateStoredHistory([...passedHistory, {accNum: matchedAcc, history: newHistory}])
+      updateStoredUserInfo(currentUsers)
+    } else {
+      setNotEnoughBalance(true)
+    }
     e.target.reset()
     resetState()
   }
@@ -64,7 +54,7 @@ export default function WithdrawControl({ displayFeature, currentUsers, setCurre
         <div className='withdraw-deposit-title'>
           Withdraw
         </div>
-        <div className={displayFeature}>
+        <div className='enter-acc-no'>
         {accessingUser === 'admin' &&
           <AccountOptions passedUserInfo={currentUsers} onSetAccLabel={setAccLabel} selectedAccLabel={accLabel} onSelectAcc={setAccMatch} selectedAcc={matchedAcc}/>
         }
@@ -72,10 +62,10 @@ export default function WithdrawControl({ displayFeature, currentUsers, setCurre
         <label htmlFor="amount">Enter an Amount</label>
         <div className='withdraw-enter-amount'>
           <CurrencyOptions convertCurr={currency} onConvertCurr={setCurrency}/> 
-          <input required type="number" name='amount' onChange={storeWithdrawAmount}/>
+          <input required type="number" name='amount' onChange={(e) => setWithdrawAmount(Number(e.target.value))}/>
         </div>
         <div className='withdraw-triggers'>
-          <button>Withdraw</button>
+          <button title="withdraw-button">Withdraw</button>
           <button type='reset' onClick={resetState}>Reset</button>
         </div>
       </form>

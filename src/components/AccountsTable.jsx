@@ -2,12 +2,13 @@ import React from 'react'
 import {v4 as uuidv4} from 'uuid';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrashCan } from '@fortawesome/free-regular-svg-icons';
+import { updateStoredUserInfo } from '../storage/storage';
 
 export default function AccountsTable({ passedUserInfo, setPassedUserInfo }) {
-
   function deleteUser(acc) {
     const newUsers = passedUserInfo.filter((users)=> users.accNum !== acc)
-    setPassedUserInfo([...newUsers])
+    setPassedUserInfo(newUsers)
+    updateStoredUserInfo(newUsers)
   }
 
   return (
@@ -16,61 +17,61 @@ export default function AccountsTable({ passedUserInfo, setPassedUserInfo }) {
         <div className='account-table-data'>
           <div className='account-table-account-no'>
             <div className='table-title'>Account No.</div>
-            {passedUserInfo.map((user) =>{
+            {passedUserInfo.map(({ accNum }) =>{
                 return (
                   <div key={uuidv4()}>
-                    {user.accNum}
+                    {accNum}
                   </div>
                 )
               })}
           </div>
           <div className='account-table-account-name'>
             <div className='table-title'>Account Name</div>
-            {passedUserInfo.map((user) =>{
+            {passedUserInfo.map(({ lname, fname, mname }) =>{
                 return (
                   <div key={uuidv4()}>
-                    {user.lname} {user.fname} {user.mname}
+                    {lname} {fname} {mname}
                   </div>
                 )
               })}
           </div>
           <div className='account-table-account-category'>
             <div className='table-title'>Account Category</div>
-            {passedUserInfo.map((user) =>{
+            {passedUserInfo.map(({ acccateg }) =>{
                 return (
                   <div key={uuidv4()}>
-                    {user.acccateg}
+                    {acccateg}
                   </div>
                 )
               })}
           </div>
           <div className='account-table-account-type'>
             <div className='table-title'>Account Type</div>
-            {passedUserInfo.map((user) =>{
+            {passedUserInfo.map(({ acctype }) =>{
                 return (
                   <div key={uuidv4()}>
-                    {user.acctype}
+                    {acctype}
                   </div>
                 )
               })}
           </div>
           <div className='account-table-account-balance'>
             <div className='table-title'>Balance</div>
-            {passedUserInfo.map((user) =>{
+            {passedUserInfo.map(({ balance }) =>{
                 return (
                   <div key={uuidv4()}>
-                    ₱ {user.balance}
+                    ₱ {balance}
                   </div>
                 )
               })}
           </div>
           <div className='account-table-account-delete'>
             <div className='table-title'>Delete</div>
-            {passedUserInfo.map((user) =>{
-                  if(user.accNum) {
+            {passedUserInfo.map(({ accNum }) =>{
+                  if(accNum) {
                     return (
                       <div key={uuidv4()} className="deleteBtn">
-                        <FontAwesomeIcon icon={faTrashCan} onClick={()=> deleteUser(user.accNum)}/>
+                        <FontAwesomeIcon icon={faTrashCan} onClick={()=> deleteUser(accNum)}/>
                       </div>
                     )
                   }

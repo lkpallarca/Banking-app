@@ -261,11 +261,12 @@ a:hover, .downloadBtn:hover {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   width: 60rem;
-  height: 20rem;
+  height: 10px;
   padding: 5vh;
   margin: 0 auto;
 }
 .form-wrapper .left-wrapper {
+  height: 90vh;
   background: url("/src/assets/01.png");
   border-top-left-radius: 10px;
   border-bottom-left-radius: 10px;
@@ -279,10 +280,12 @@ a:hover, .downloadBtn:hover {
   font-weight: 900;
 }
 .form-wrapper .left-wrapper .modalIcon {
-  width: 100%;
+  height: 60vh;
+  width: 30vw;
   margin: 0 50px;
 }
 .form-wrapper .right-wrapper {
+  height: 90vh;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(12px);
@@ -309,7 +312,6 @@ a:hover, .downloadBtn:hover {
   justify-content: center;
   align-items: center;
   color: black;
-  padding-top: 3rem;
   line-height: 3rem;
 }
 .form-wrapper .right-wrapper form .email-and-accountNumber-label, .form-wrapper .right-wrapper form .username-password-label, .form-wrapper .right-wrapper form .fullname-label {

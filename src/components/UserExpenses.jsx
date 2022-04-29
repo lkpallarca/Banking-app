@@ -5,8 +5,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrashCan } from '@fortawesome/free-regular-svg-icons';
 import capitalizeLetters from '../utils/capitalizeLetters';
 import AlertModals from './AlertModals';
+import { getLoggedUser, getStoredUsers, updateStoredUserInfo } from '../storage/storage';
+import useDate from '../hooks/useDate';
 
-export default function UserExpenses({ accessingUser, passedBalance, setPassedBalance, passedHistory, setPassedHistory }) {
+export default function UserExpenses({ passedHistory, setPassedHistory }) {
+  const accessingUser = getLoggedUser()
+  let users = getStoredUsers();
+  const selectedUser = users.find(user => user.accNum === accessingUser)
   const [userExpense, setUserExpense] = useState()
   const [expenseCost, setExpenseCost] = useState(0)
   const [currentExpenses, setCurrentExpenses] = useState([])
@@ -14,12 +19,7 @@ export default function UserExpenses({ accessingUser, passedBalance, setPassedBa
   const [itemAmountInvalid, setItemAmountInvalid] = useState(false)
   const [expenseExistsAlert, setExpenseExistsAlert] = useState(false)
   const [successfulAdd, setSuccesfulAdd] = useState(false)
-  let users = JSON.parse(localStorage.getItem("users"))
-  const date = new Date().toLocaleString().split(',')[0]
-  const hours = new Date().getHours()
-  var mins = new Date().getMinutes()
-  mins = mins > 9 ? mins : '0' + mins
-  const time = `${date} ${hours}:${mins}`
+  const { time } = useDate();
 
   useEffect(() => {
     let specificUserInfo = users.find(user => user.accNum == accessingUser)
@@ -39,8 +39,7 @@ export default function UserExpenses({ accessingUser, passedBalance, setPassedBa
     setExpenseCost(Number(e.target.value))
   }
 
-  function handleSubmit(e) {
-    e.preventDefault()
+  const shortCircuit = (e) => {
     if(!userExpense || expenseCost <= 0) {
       setItemAmountInvalid(true)
       e.target.reset()
@@ -53,31 +52,31 @@ export default function UserExpenses({ accessingUser, passedBalance, setPassedBa
       resetState()
       return
     }
-    users.find(user => {
-      if(user.accNum == accessingUser) {
-        let newUserExpense = {item: userExpense, cost: expenseCost}
-        user.expenses.push(newUserExpense)
-        setCurrentExpenses(user.expenses)
-        user.balance -= expenseCost
-        setPassedBalance(user.balance)
-        let newHistory = `${user.lname} ${user.fname} added ${userExpense} worth ₱${expenseCost} on ${time}.`
-        setPassedHistory([...passedHistory, {accNum: accessingUser, history: newHistory}])
-        localStorage.setItem("users", JSON.stringify(users))
-        setSuccesfulAdd(true)
-      }
-    })
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    shortCircuit(e)
+    let newUserExpense = {item: userExpense, cost: expenseCost}
+    selectedUser.expenses.push(newUserExpense)
+    setCurrentExpenses(selectedUser.expenses)
+    selectedUser.balance -= expenseCost
+    let newHistory = `${selectedUser.lname} ${selectedUser.fname} added ${userExpense} worth ₱${expenseCost} on ${time}.`
+    setPassedHistory([...passedHistory, {accNum: accessingUser, history: newHistory}])
+    updateStoredUserInfo(users)
+    setSuccesfulAdd(true)
     e.target.reset()
     resetState()
   }
 
   function deleteExpense(selectedItem) {
+    // previous coding snippet
     let users = JSON.parse(localStorage.getItem("users"))
     let accessingUserInfo = users.find(user => user.accNum == accessingUser)
     let expenseList = accessingUserInfo.expenses
     expenseList.find(list => {
       if(list.item == selectedItem) {
         accessingUserInfo.balance += list.cost
-        setPassedBalance(accessingUserInfo.balance)
         let newHistory = `${accessingUserInfo.lname} ${accessingUserInfo.fname} removed ${list.item} worth ₱${list.cost} on ${time}.`
         setPassedHistory([...passedHistory, {accNum: accessingUser, history: newHistory}])
       }
@@ -101,7 +100,7 @@ export default function UserExpenses({ accessingUser, passedBalance, setPassedBa
         <div className='curr-balance'>
           <div className='budget-title'>BUDGET</div>
           <p className='balance-title'>Your Balance</p>
-          <p className='balance-val'>{passedBalance}</p>
+          <p className='balance-val'>{selectedUser.balance}</p>
           <form onSubmit={handleSubmit} autoComplete="off">
             <div>
             <label htmlFor="expense-item">Add Expense Item</label>

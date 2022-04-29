@@ -1,11 +1,44 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import {v4 as uuidv4} from 'uuid'
+import { getLoggedUser, getStoredUsers } from '../storage/storage'
 
-export default function ChildBalance({ passedChildAccNum, passedChildName, ifHasChildren, passedChildArray }) {
+export default function ChildBalance({ increment }) {
+  const [hasChildren, setHasChildren] = useState(false)
+  const userInfo = getStoredUsers()
+  const loggedUser = getLoggedUser()
+  const [childData, setChildData] = useState({})
+  const [childBalances, setChildBalances] = useState([])
+
+  useEffect(() => {
+    let childAccNum = []
+    let childName = []
+    userInfo.forEach(each => {
+      if(each.parentAcc === loggedUser) {
+        childAccNum.push(each.accNum)
+        childName.push(`${each.lname} ${each.fname} ${each.mname}`)
+        setChildData({
+          childAccounts: childAccNum,
+          childNames: childName,
+        })
+        setHasChildren(true);
+      }
+    })
+  }, [])
+
+  useEffect(() => {
+    if(increment < 2) return
+    const children = userInfo.filter(each => each.parentAcc === loggedUser)
+    let accumulate = []
+    children.forEach(each => {
+      accumulate.push(each.balance)
+    })
+    setChildBalances(accumulate)
+  }, [increment])
   
+
   return (
     <>
-      {ifHasChildren === false ?
+      {hasChildren === false ?
         <div className='user-info-wrapper'>You currently have no Child Account/s connected</div> :
          <>
          <div className='user-info-wrapper'>
@@ -13,7 +46,7 @@ export default function ChildBalance({ passedChildAccNum, passedChildName, ifHas
            <div className='user-child-info'>
              <div className='account-table-account-no'>
              <div className='table-title'>Child Acc No.</div>
-               {passedChildAccNum.map((acc) =>{
+               {childData.childAccounts?.map(acc =>{
                  return (
                  <div key={uuidv4()}>
                    {acc}
@@ -23,7 +56,7 @@ export default function ChildBalance({ passedChildAccNum, passedChildName, ifHas
               </div>
               <div className='account-table-account-name'>
               <div className='table-title'>Child Name</div>
-                {passedChildName.map((name) =>{
+                {childData.childNames?.map(name =>{
                   return (
                   <div key={uuidv4()}>
                    {name}
@@ -33,7 +66,7 @@ export default function ChildBalance({ passedChildAccNum, passedChildName, ifHas
               </div>
               <div className='account-table-account-balance'>
               <div className='table-title'>Child Balance</div>
-                {passedChildArray.map((balance) =>{
+                {childBalances?.map(balance =>{
                   return (
                   <div key={uuidv4()}>
                    {balance}

@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import './../css/index.css';
 import leftimg from './../assets/business-woman.png';
 import AlertModals from './AlertModals';
+import { getStoredUsers, updateStoredUserInfo } from '../storage/storage'
 
-export default function SignUpModal({ displayState, closeState }) {
+export default function SignUpModal({ closeState }) {
   const [accessingUser, setAccessingUser] = useState('')
   const [userEmail, setUserEmail] = useState('')
   const [userUsername, setUserUsername] = useState('')
@@ -13,15 +14,15 @@ export default function SignUpModal({ displayState, closeState }) {
   const [passNotMatch, setPassNotMatch] = useState(false)
   const [signUpSuccessful, setSignUpSuccessful] = useState(false)
   const [accountNotExist, setAccountNotExist] = useState(false)
-  let users = JSON.parse(localStorage.getItem("users")) 
+  const [showConfirm, setShowConfirm] = useState(false)
+  let users = getStoredUsers();
 
   function handleAccChange(e) {
-    users.find(user => {
-      if(user.accNum == e.target.value) {
-        setUserExists(true)
-        setAccessingUser(e.target.value)
-      }
-    })
+    const selectedUser = users.find(user => user.accNum === e.target.value)
+    if(selectedUser) {
+      setUserExists(true)
+      setAccessingUser(e.target.value)
+    }
   }
 
   function handleEmailChange(e) {
@@ -37,13 +38,17 @@ export default function SignUpModal({ displayState, closeState }) {
   }
 
   function handleConfirmPassword(e) {
+    if(userPassword.length === e.target.value.length && userPassword.length !== 0 && e.target.value.length !== 0) {
+      setShowConfirm(true)
+    } else {
+      setShowConfirm(false)
+    }
     if(userPassword === e.target.value){
       setPassMatch(true)
     } else {
       setPassMatch(false)
     }
   }
-  
   
   function handleSubmit(e) {
     e.preventDefault()
@@ -52,18 +57,15 @@ export default function SignUpModal({ displayState, closeState }) {
       return
     }
     if(userExists === true) {
-      users.find(user => {
-        if(user.accNum === accessingUser) {
-          let newInfo = {
-            email: userEmail,
-            username: userUsername,
-            password: userPassword
-          }
-          Object.assign(user, newInfo)
-          localStorage.setItem("users", JSON.stringify(users))          
-          setSignUpSuccessful(true)
-        }
-      })
+      const selectedUser = users.find(user => user.accNum === accessingUser)
+      let newInfo = {
+        email: userEmail,
+        username: userUsername,
+        password: userPassword
+      }
+      Object.assign(selectedUser, newInfo)
+      updateStoredUserInfo(users)
+      setSignUpSuccessful(true)
     } else {
       setAccountNotExist(true)
     }
@@ -81,7 +83,7 @@ export default function SignUpModal({ displayState, closeState }) {
   }
 
   return (
-    <div className={displayState}>
+    <div className="show-sign-up-modal">
       <div className="form-wrapper">
         <div className="left-wrapper">
           <p className="left-wrapper-text">
@@ -100,7 +102,7 @@ export default function SignUpModal({ displayState, closeState }) {
                 <label htmlFor="email" className="email-label">Email</label>
               </div>
               <input onChange={handleAccChange} type="text" id="account-number" placeholder="Enter your account number here" required></input>
-              <input onChange={handleEmailChange} type="email" id="email" placeholder="Enter email here" required></input>
+              <input onChange={handleEmailChange} type="email" id="email" placeholder="Enter email here" required title="email-input"></input>
             </div>  
             <div className="username-password">
               <div className="username-password-label">
@@ -111,7 +113,7 @@ export default function SignUpModal({ displayState, closeState }) {
               <input onChange={handlePasswordChange} type="password" id="password" placeholder="Password (8 or more characters)" required minLength={8}></input>
             </div> 
             <input onChange={handleConfirmPassword} type="password" id="confirm-password" placeholder="Confirm Password" required minLength={8}></input>
-            <span className='password-info'>{passMatch ? "Passwords match! ✔️" : "Passwords does not match. ❌"}</span>
+            {showConfirm ? <span className='password-info'>{passMatch ? "Passwords match! ✔️" : "Passwords does not match. ❌"}</span> : null}
             <input type="submit" id="submitBtn"></input>
           </form>
           <p className="disclaimer">By submitting this form, you agree to the Terms of Use and Privacy of this website.</p>

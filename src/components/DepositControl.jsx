@@ -3,23 +3,18 @@ import CurrencyOptions from './CurrencyOptions';
 import AlertModals from './AlertModals';
 import './../css/index.css';
 import { AccountOptions } from './AccountOptions';
+import useDate from '../hooks/useDate';
+import { updateStoredHistory, updateStoredUserInfo, getLoggedUser } from '../storage/storage';
 
-export default function DepositControl({ displayFeature, currentUsers, setCurrentUser, passedHistory, setPassedHistory, accessingUser }) {
+export default function DepositControl({ currentUsers, setCurrentUser, passedHistory, setPassedHistory }) {
+  const accessingUser = getLoggedUser()
   const [matchedAcc, setAccMatch] = useState(accessingUser);
   const [accLabel, setAccLabel] = useState('Please select Account Number');
   const [depositAmount, setDepositAmount] = useState()
   const [transactionSuccessful, setTransactionSuccessful] = useState(false)
   const [invalidAmount, setInvalidAmount] = useState(false)
   const [currency, setCurrency] = useState(1)
-  const date = new Date().toLocaleString().split(',')[0]
-  const hours = new Date().getHours()
-  var mins = new Date().getMinutes()
-  mins = mins > 9 ? mins : '0' + mins
-  const time = `${date} ${hours}:${mins}`
-
-  function storeDepositAmount(e) {
-    setDepositAmount(Number(e.target.value))
-  }
+ const { time } = useDate();
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -29,19 +24,14 @@ export default function DepositControl({ displayFeature, currentUsers, setCurren
       resetState()
       return
     }
-    currentUsers.findIndex(acc => {
-      if(acc.accNum === matchedAcc) {
-        let newBalance = acc.balance
-        let deposit = depositAmount
-        deposit *= currency
-        newBalance += deposit
-        acc.balance = newBalance
-        let newHistory = `${acc.lname} ${acc.fname} deposited ₱${deposit} on ${time}.`
-        setPassedHistory([...passedHistory, {accNum: matchedAcc, history: newHistory}])
-        setTransactionSuccessful(true)
-        setCurrentUser([...currentUsers])
-      }
-    })
+    const selectedUser = currentUsers.find(acc => acc.accNum === matchedAcc)
+    selectedUser.balance += (depositAmount * currency)
+    let newHistory = `${selectedUser.lname} ${selectedUser.fname} deposited ₱${(depositAmount * currency)} on ${time}.`
+    setPassedHistory([...passedHistory, {accNum: matchedAcc, history: newHistory}])
+    setTransactionSuccessful(true)
+    setCurrentUser(currentUsers)
+    updateStoredHistory([...passedHistory, {accNum: matchedAcc, history: newHistory}])
+    updateStoredUserInfo(currentUsers)
     e.target.reset()
     resetState()
   }
@@ -59,7 +49,7 @@ export default function DepositControl({ displayFeature, currentUsers, setCurren
         Deposit
       </div>
     <form autoComplete='off' onSubmit={handleSubmit}>
-      <div className={displayFeature}>
+      <div className='enter-acc-no'>
       {accessingUser === 'admin' &&
         <AccountOptions passedUserInfo={currentUsers} onSetAccLabel={setAccLabel} selectedAccLabel={accLabel} onSelectAcc={setAccMatch} selectedAcc={matchedAcc}/>
       }
@@ -67,7 +57,7 @@ export default function DepositControl({ displayFeature, currentUsers, setCurren
       <label htmlFor="amount">Enter an Amount</label>
       <div className='deposit-enter-amount'>
         <CurrencyOptions convertCurr={currency} onConvertCurr={setCurrency}/>
-        <input required type="number" name='amount' onChange={storeDepositAmount}/>
+        <input required type="number" name='amount' onChange={(e) => setDepositAmount(Number(e.target.value))}/>
       </div>
       <div className='deposit-triggers'>
         <button>Deposit</button>
